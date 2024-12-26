@@ -28,7 +28,7 @@ export const signupUser = async (req: Request, res: Response): Promise<Response 
     const hashedPassword = await hashPassword(password);
 
     const user = await pool.query({
-      text: `INSERT INTO "user" (email, first_name, password) VALUES ($1, $2, $3) RETURNING *`,
+      text: `INSERT INTO "user" ("email", "firstName", "password") VALUES ($1, $2, $3) RETURNING *`,
       values: [email, firstName, hashedPassword],
     });
 
