@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { pool } from "../libs/database";
 import { comparePassword, createJWTToken, hashPassword } from "../libs/index";
 
-export const signupUser = async (req: Request, res: Response): Promise<Response | undefined> => {
+export const signupUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, firstName, password } = req.body;
 
@@ -19,10 +19,11 @@ export const signupUser = async (req: Request, res: Response): Promise<Response 
     });
 
     if (result.rows[0].exists) {
-      return res.status(409).json({
+      res.status(409).json({
         status: "error",
         message: "Email address already taken. Try another email address.",
       });
+      return;
     }
 
     const hashedPassword = await hashPassword(password);
@@ -46,7 +47,7 @@ export const signupUser = async (req: Request, res: Response): Promise<Response 
   }
 };
 
-export const signinUser = async (req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined> => {
+export const signinUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
@@ -65,19 +66,21 @@ export const signinUser = async (req: Request, res: Response): Promise<Response<
     const user = result.rows[0];
 
     if (!user) {
-      return res.status(404).json({
+      res.status(404).json({
         status: "error",
         message: "User not found",
       });
+      return;
     }
 
     const isPasswordMatch = await comparePassword(password, user.password);
 
     if (!isPasswordMatch) {
-      return res.status(401).json({
+      res.status(401).json({
         status: "error",
         message: "Invalid email or password",
       });
+      return;
     }
 
     // Create JWT token
