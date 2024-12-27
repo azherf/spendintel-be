@@ -33,7 +33,7 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction): void =
       return;
     }
 
-    (req as any).user = {
+    (req as any).body.user = {
       userId: userToken.userId,
     };
 
