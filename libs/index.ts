@@ -15,6 +15,11 @@ export const comparePassword = async (password: string, hashedPassword: string):
   }
 }
 
-export const createJWTToken = (id: string): string => {
-  return JWT.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-}
+export const createJWTToken = (userId: string, ip: string | undefined, userAgent: string | undefined): string => {
+  const nonce = Math.random().toString(36).substring(7);
+  return JWT.sign(
+    { userId, ip, userAgent, nonce },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+};

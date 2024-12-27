@@ -81,7 +81,7 @@ export const signinUser = async (req: Request, res: Response): Promise<Response<
     }
 
     // Create JWT token
-    const token = createJWTToken(user.id);
+    const token = createJWTToken(user.id, req.ip, req.get("User-Agent"));
 
     user.password = undefined;
 
