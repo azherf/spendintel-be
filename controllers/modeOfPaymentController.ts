@@ -98,22 +98,22 @@ export const deleteModeOfPayment = async (req: AuthenticatedRequest, res: Respon
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const category = await pool.query({
-      text: `UPDATE category SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1 and "userId" = $2 RETURNING *`,
+    const modeOfPayment = await pool.query({
+      text: `UPDATE mode_of_payment SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1 and "userId" = $2 RETURNING *`,
       values: [id, userId],
     });
 
-    if (!category.rows[0]) {
+    if (!modeOfPayment.rows[0]) {
       res.status(404).json({
         status: "error",
-        message: "Category not found",
+        message: "Mode of payment not found",
       });
       return;
     }
 
     res.status(200).json({
       status: "success",
-      message: "Category deleted successfully",
+      message: "Mode of payment deleted successfully",
     });
   } catch (error) {
     console.error(error);
