@@ -2,7 +2,6 @@ import { Response } from "express";
 import { pool } from "../libs/database";
 import { AuthenticatedRequest } from "../types/express";
 
-/* /categories */
 export const getCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
@@ -21,7 +20,6 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   }
 }
 
-/* /categories/{id} */
 export const getCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
@@ -49,7 +47,6 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
   }
 }
 
-/* /categories */
 export const createCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId} = req.body.user;
@@ -71,9 +68,26 @@ export const createCategory = async (req: AuthenticatedRequest, res: Response): 
 
 export const updateCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // Get user ID from request body
-    // Get category ID from request body
-    // Update category in the database
+    const { userId } = req.body.user;
+    const { id } = req.params;
+    const { name, description, type } = req.body;
+    const category = await pool.query({
+      text: `UPDATE category SET name = $1, description = $2, type = $3, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $4 and "userId" = $5 RETURNING *`,
+      values: [name, description, type, id, userId],
+    });
+
+    if (!category.rows[0]) {
+      res.status(404).json({
+        status: "error",
+        message: "Category not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: category.rows[0],
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
