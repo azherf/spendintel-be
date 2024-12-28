@@ -6,7 +6,7 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   try {
     const { userId } = req.body.user;
     const categories = await pool.query({
-      text: `SELECT * FROM category WHERE "userId" = $1 or "userId" IS NULL and "deletedAt" IS NULL`,
+      text: `SELECT * FROM category WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [userId],
     });
 
@@ -25,7 +25,7 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
     const { userId } = req.body.user;
     const { id } = req.params;
     const category = await pool.query({
-      text: `SELECT * FROM category WHERE id = $1 and "userId" = $2 or "userId" IS NULL and "deletedAt" IS NULL`,
+      text: `SELECT * FROM category WHERE id = $1 and ("userId" = $2 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [id, userId],
     });
 
