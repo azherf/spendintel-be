@@ -6,7 +6,7 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   try {
     const { userId } = req.body.user;
     const categories = await pool.query({
-      text: `SELECT * FROM category WHERE "userId" = $1 or "userId" IS NULL and "deletedAt" IS NULL`,
+      text: `SELECT * FROM category WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [userId],
     });
 
@@ -25,7 +25,7 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
     const { userId } = req.body.user;
     const { id } = req.params;
     const category = await pool.query({
-      text: `SELECT * FROM category WHERE id = $1 and "userId" = $2 or "userId" IS NULL and "deletedAt" IS NULL`,
+      text: `SELECT * FROM category WHERE id = $1 and ("userId" = $2 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [id, userId],
     });
 
@@ -96,9 +96,25 @@ export const updateCategory = async (req: AuthenticatedRequest, res: Response): 
 
 export const deleteCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // Get user ID from request body
-    // Get category ID from request body
-    // Delete category from the database
+    const { userId } = req.body.user;
+    const { id } = req.params;
+    const category = await pool.query({
+      text: `UPDATE category SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1 and "userId" = $2 RETURNING *`,
+      values: [id, userId],
+    });
+
+    if (!category.rows[0]) {
+      res.status(404).json({
+        status: "error",
+        message: "Category not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Category deleted successfully",
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
