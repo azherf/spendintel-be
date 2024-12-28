@@ -2,7 +2,7 @@ import { Response } from "express";
 import { pool } from "../libs/database";
 import { AuthenticatedRequest } from "../types/express";
 
-// /categories
+/* /categories */
 export const getCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
@@ -21,7 +21,7 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   }
 }
 
-// /categories/{id}
+/* /categories/{id} */
 export const getCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
@@ -49,11 +49,20 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
   }
 }
 
+/* /categories */
 export const createCategory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // Get user ID from request body
-    // Get category name from request body
-    // Create category in the database
+    const { userId} = req.body.user;
+    const { name, description, type } = req.body;
+    const category = await pool.query({
+      text: `INSERT INTO category ("userId", name, description, type) VALUES ($1, $2, $3, $4) RETURNING *`,
+      values: [userId, name, description, type],
+    });
+
+    res.status(201).json({
+      status: "success",
+      data: category.rows[0],
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
