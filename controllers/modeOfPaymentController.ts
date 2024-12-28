@@ -5,14 +5,14 @@ import { AuthenticatedRequest } from "../types/express";
 export const getModesOfPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
-    const categories = await pool.query({
-      text: `SELECT * FROM category WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
+    const modesOfPayment = await pool.query({
+      text: `SELECT * FROM mode_of_payment WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [userId],
     });
 
     res.status(200).json({
       status: "success",
-      data: categories.rows,
+      data: modesOfPayment.rows,
     });
   } catch (error) {
     console.error(error);
@@ -24,22 +24,22 @@ export const getModeOfPayment = async (req: AuthenticatedRequest, res: Response)
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const category = await pool.query({
-      text: `SELECT * FROM category WHERE id = $1 and ("userId" = $2 or "userId" IS NULL) and "deletedAt" IS NULL`,
+    const modeOfPayment = await pool.query({
+      text: `SELECT * FROM mode_of_payment WHERE id = $1 and ("userId" = $2 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [id, userId],
     });
 
-    if (!category.rows[0]) {
+    if (!modeOfPayment.rows[0]) {
       res.status(404).json({
         status: "error",
-        message: "Category not found",
+        message: "Mode of payment not found",
       });
       return;
     }
 
     res.status(200).json({
       status: "success",
-      data: category.rows[0],
+      data: modeOfPayment.rows[0],
     });
   } catch (error) {
     console.error(error);
