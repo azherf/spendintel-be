@@ -70,23 +70,23 @@ export const updateModeOfPayment = async (req: AuthenticatedRequest, res: Respon
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const { name, description, type } = req.body;
-    const category = await pool.query({
-      text: `UPDATE category SET name = $1, description = $2, type = $3, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $4 and "userId" = $5 RETURNING *`,
-      values: [name, description, type, id, userId],
+    const { name, description } = req.body;
+    const modeOfPayment = await pool.query({
+      text: `UPDATE mode_of_payment SET name = $1, description = $2, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $3 and "userId" = $4 RETURNING *`,
+      values: [name, description, id, userId],
     });
 
-    if (!category.rows[0]) {
+    if (!modeOfPayment.rows[0]) {
       res.status(404).json({
         status: "error",
-        message: "Category not found",
+        message: "Mode of payment not found",
       });
       return;
     }
 
     res.status(200).json({
       status: "success",
-      data: category.rows[0],
+      data: modeOfPayment.rows[0],
     });
   } catch (error) {
     console.error(error);
