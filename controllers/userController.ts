@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { pool } from "../libs/database";
-import { comparePassword, hashPassword } from "../libs/index";
+import { comparePassword, hashPassword } from "../libs/utils";
 import { AuthenticatedRequest } from "../types/express";
 
 export const getUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

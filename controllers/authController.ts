@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../libs/database";
-import { comparePassword, createJWTToken, hashPassword } from "../libs/index";
+import { comparePassword, createJWTToken, hashPassword } from "../libs/utils";
 
 export const signupUser = async (req: Request, res: Response): Promise<void> => {
   try {

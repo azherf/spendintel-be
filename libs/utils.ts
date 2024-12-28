@@ -23,3 +23,7 @@ export const createJWTToken = (userId: string, ip: string | undefined, userAgent
     { expiresIn: "1h" }
   );
 };
+
+export const convertCurrency = (options: { amount: number, fromCurrencyRate: number, toCurrencyRate: number }): number => {
+  return (options.amount * options.fromCurrencyRate) / options.toCurrencyRate;
+}
