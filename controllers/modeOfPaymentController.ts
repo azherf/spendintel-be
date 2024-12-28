@@ -50,15 +50,15 @@ export const getModeOfPayment = async (req: AuthenticatedRequest, res: Response)
 export const createModeOfPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId} = req.body.user;
-    const { name, description, type } = req.body;
-    const category = await pool.query({
-      text: `INSERT INTO category ("userId", name, description, type) VALUES ($1, $2, $3, $4) RETURNING *`,
-      values: [userId, name, description, type],
+    const { name, description } = req.body;
+    const modeOfPayment = await pool.query({
+      text: `INSERT INTO mode_of_payment ("userId", name, description) VALUES ($1, $2, $3) RETURNING *`,
+      values: [userId, name, description],
     });
 
     res.status(201).json({
       status: "success",
-      data: category.rows[0],
+      data: modeOfPayment.rows[0],
     });
   } catch (error) {
     console.error(error);
