@@ -92,7 +92,49 @@ export const createTransaction = async (req: AuthenticatedRequest, res: Response
 
 export const updateTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // TODO: Implement updateTransaction controller
+    const { userId } = req.body.user;
+    const { id } = req.params;
+    const { description, amount, currency, categoryId, modeOfPaymentId, transactionDate } = req.body;
+    let { convertedAmount, baseCurrency } = req.body;
+    // Check if baseCurrency is provided, if not, get the default currency of the user
+    if (!baseCurrency) {
+      const user = await pool.query({
+        text: `SELECT * FROM "user" WHERE id = $1`,
+        values: [userId],
+      });
+      baseCurrency = user.rows[0].defaultCurrency;
+    }
+    // Check if convertedAmount is provided, if not, convert the amount to baseCurrency
+    if (!convertedAmount) {
+      if (baseCurrency === currency) {
+        convertedAmount = amount;
+      } else {
+        const dbCurrencies = await pool.query({
+          text: `SELECT * FROM currency WHERE code = $1 or code = $2`,
+          values: [currency, baseCurrency],
+        });
+        const fromCurrencyRate = dbCurrencies.rows.find((dbCurrency) => dbCurrency.code === currency)?.exchangeRate;
+        const toCurrencyRate = dbCurrencies.rows.find((dbCurrency) => dbCurrency.code === baseCurrency)?.exchangeRate;
+        convertedAmount = convertCurrency({ amount, fromCurrencyRate, toCurrencyRate });
+      }
+    }
+    const transaction = await pool.query({
+      text: `UPDATE transaction SET description = $1, amount = $2, currency = $3, "convertedAmount" = $4, "baseCurrency" = $5, "categoryId" = $6, "modeOfPaymentId" = $7, "transactionDate" = $8, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $9 and "userId" = $10 RETURNING *`,
+      values: [description, amount, currency, convertedAmount, baseCurrency, categoryId, modeOfPaymentId, transactionDate, id, userId],
+    });
+
+    if (!transaction.rows[0]) {
+      res.status(404).json({
+        status: "error",
+        message: "Transaction not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: transaction.rows[0],
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
