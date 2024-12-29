@@ -127,7 +127,25 @@ const determineConvertedAmount = async (amount: number, convertedAmount: number,
 
 export const deleteTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // TODO: Implement deleteTransaction controller
+    const { userId } = req.body.user;
+    const { id } = req.params;
+    const transaction = await pool.query({
+      text: `UPDATE transaction SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1 and "userId" = $2 RETURNING *`,
+      values: [id, userId],
+    });
+
+    if (!transaction.rows[0]) {
+      res.status(404).json({
+        status: "error",
+        message: "Transaction not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Transaction deleted successfully",
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
