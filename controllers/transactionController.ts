@@ -251,6 +251,15 @@ export const uploadTransactions = async (req: AuthenticatedRequest, res: Respons
     const newTransactions = transactions.map((transaction: any) => {
       const dbCategory = dbCategories.find((dbCategory) => dbCategory.id === transaction.Category);
       const dbModeOfPayment = dbModesOfPayment.find((dbModeOfPayment) => dbModeOfPayment.id === transaction["Mode of Payment"]);
+
+      if (!transaction.Description || !transaction.Amount || !transaction.Currency || !transaction["Transaction Date"] || !transaction.Category || !transaction["Mode of Payment"]) {
+        throw new Error(`Invalid transaction data: ${JSON.stringify(transaction)}`);
+      }
+
+      if (!dbCategory || !dbModeOfPayment) {
+        throw new Error(`Invalid category or mode of payment for transaction: ${transaction.Description}`);
+      }
+
       const baseCurrency = transaction["Base Currency"] ?? determineBaseCurrency(userId);
       return {
         userId,
