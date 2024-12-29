@@ -1,18 +1,19 @@
 import { Response } from "express";
 import { pool } from "../libs/database";
 import { AuthenticatedRequest } from "../types/express";
+import { Category, CategoryResult } from "../types/category";
 
 export const getCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
-    const categories = await pool.query({
+    const categoryResult: CategoryResult = await pool.query({
       text: `SELECT * FROM category WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [userId],
     });
 
     res.status(200).json({
       status: "success",
-      data: categories.rows,
+      data: categoryResult.rows,
     });
   } catch (error) {
     console.error(error);
@@ -24,12 +25,12 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const category = await pool.query({
+    const categoryResult: CategoryResult = await pool.query({
       text: `SELECT * FROM category WHERE id = $1 and ("userId" = $2 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [id, userId],
     });
 
-    if (!category.rows[0]) {
+    if (!categoryResult.rows[0]) {
       res.status(404).json({
         status: "error",
         message: "Category not found",
@@ -39,7 +40,7 @@ export const getCategory = async (req: AuthenticatedRequest, res: Response): Pro
 
     res.status(200).json({
       status: "success",
-      data: category.rows[0],
+      data: categoryResult.rows[0],
     });
   } catch (error) {
     console.error(error);
@@ -51,14 +52,14 @@ export const createCategory = async (req: AuthenticatedRequest, res: Response): 
   try {
     const { userId} = req.body.user;
     const { name, description, type } = req.body;
-    const category = await pool.query({
+    const categoryResult: CategoryResult = await pool.query({
       text: `INSERT INTO category ("userId", name, description, type) VALUES ($1, $2, $3, $4) RETURNING *`,
       values: [userId, name, description, type],
     });
 
     res.status(201).json({
       status: "success",
-      data: category.rows[0],
+      data: categoryResult.rows[0],
     });
   } catch (error) {
     console.error(error);
@@ -71,12 +72,12 @@ export const updateCategory = async (req: AuthenticatedRequest, res: Response): 
     const { userId } = req.body.user;
     const { id } = req.params;
     const { name, description, type } = req.body;
-    const category = await pool.query({
+    const categoryResult: CategoryResult = await pool.query({
       text: `UPDATE category SET name = $1, description = $2, type = $3, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $4 and "userId" = $5 RETURNING *`,
       values: [name, description, type, id, userId],
     });
 
-    if (!category.rows[0]) {
+    if (!categoryResult.rows[0]) {
       res.status(404).json({
         status: "error",
         message: "Category not found",
@@ -86,7 +87,7 @@ export const updateCategory = async (req: AuthenticatedRequest, res: Response): 
 
     res.status(200).json({
       status: "success",
-      data: category.rows[0],
+      data: categoryResult.rows[0],
     });
   } catch (error) {
     console.error(error);
@@ -98,12 +99,12 @@ export const deleteCategory = async (req: AuthenticatedRequest, res: Response): 
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const category = await pool.query({
+    const categoryResult: CategoryResult = await pool.query({
       text: `UPDATE category SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1 and "userId" = $2 RETURNING *`,
       values: [id, userId],
     });
 
-    if (!category.rows[0]) {
+    if (!categoryResult.rows[0]) {
       res.status(404).json({
         status: "error",
         message: "Category not found",
@@ -121,14 +122,14 @@ export const deleteCategory = async (req: AuthenticatedRequest, res: Response): 
   }
 }
 
-export const fetchCategories = async (userId: number): Promise<any> => {
+export const fetchCategories = async (userId: number): Promise<Category[]> => {
   try {
-    const categories = await pool.query({
+    const categoryResult: CategoryResult = await pool.query({
       text: `SELECT * FROM category WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
       values: [userId],
     });
 
-    return categories.rows;
+    return categoryResult.rows;
   } catch (error) {
     console.error(error);
     return [];

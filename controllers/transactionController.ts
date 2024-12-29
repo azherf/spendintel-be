@@ -1,6 +1,9 @@
 import * as XLSX from "xlsx";
 import { Response } from "express";
 import { AuthenticatedRequest } from "../types/express";
+import { TransactionResult} from "../types/transaction";
+import { UserResult } from "../types/user";
+import { CurrencyResult } from "../types/currency";
 import { pool } from "../libs/database";
 import { convertCurrency } from "../libs/utils";
 import { fetchCategories } from "./categoryController";
@@ -10,14 +13,14 @@ import { fetchCurrencies } from "./currencyController";
 export const getTransactions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
-    const transactions = await pool.query({
+    const transactionResult: TransactionResult = await pool.query({
       text: `SELECT * FROM transaction WHERE "userId" = $1 and "deletedAt" IS NULL`,
       values: [userId],
     });
 
     res.status(200).json({
       status: "success",
-      data: transactions.rows,
+      data: transactionResult.rows,
     });
   } catch (error) {
     console.error(error);
@@ -29,12 +32,12 @@ export const getTransaction = async (req: AuthenticatedRequest, res: Response): 
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const transaction = await pool.query({
+    const transactionResult: TransactionResult = await pool.query({
       text: `SELECT * FROM transaction WHERE id = $1 and "userId" = $2 and "deletedAt" IS NULL`,
       values: [id, userId],
     });
 
-    if (!transaction.rows[0]) {
+    if (!transactionResult.rows[0]) {
       res.status(404).json({
         status: "error",
         message: "Transaction not found",
@@ -44,7 +47,7 @@ export const getTransaction = async (req: AuthenticatedRequest, res: Response): 
 
     res.status(200).json({
       status: "success",
-      data: transaction.rows[0],
+      data: transactionResult.rows[0],
     });
   } catch (error) {
     console.error(error);
@@ -59,14 +62,14 @@ export const createTransaction = async (req: AuthenticatedRequest, res: Response
     let { convertedAmount, baseCurrency } = req.body;
     baseCurrency = baseCurrency ?? await determineBaseCurrency(userId);
     convertedAmount = convertedAmount ?? await determineConvertedAmount({ amount, currency, baseCurrency });
-    const transaction = await pool.query({
+    const transactionResult: TransactionResult = await pool.query({
       text: `INSERT INTO transaction ("userId", description, amount, currency, "convertedAmount", "baseCurrency", "categoryId", "modeOfPaymentId", "transactionDate") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       values: [userId, description, amount, currency, convertedAmount, baseCurrency, categoryId, modeOfPaymentId, transactionDate],
     });
 
     res.status(201).json({
       status: "success",
-      data: transaction.rows[0],
+      data: transactionResult.rows[0],
     });
   } catch (error) {
     console.error(error);
@@ -82,12 +85,12 @@ export const updateTransaction = async (req: AuthenticatedRequest, res: Response
     let { convertedAmount, baseCurrency } = req.body;
     baseCurrency = baseCurrency ?? await determineBaseCurrency(userId);
     convertedAmount = convertedAmount ?? await determineConvertedAmount({ amount, currency, baseCurrency });
-    const transaction = await pool.query({
+    const transactionResult: TransactionResult = await pool.query({
       text: `UPDATE transaction SET description = $1, amount = $2, currency = $3, "convertedAmount" = $4, "baseCurrency" = $5, "categoryId" = $6, "modeOfPaymentId" = $7, "transactionDate" = $8, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $9 and "userId" = $10 RETURNING *`,
       values: [description, amount, currency, convertedAmount, baseCurrency, categoryId, modeOfPaymentId, transactionDate, id, userId],
     });
 
-    if (!transaction.rows[0]) {
+    if (!transactionResult.rows[0]) {
       res.status(404).json({
         status: "error",
         message: "Transaction not found",
@@ -97,7 +100,7 @@ export const updateTransaction = async (req: AuthenticatedRequest, res: Response
 
     res.status(200).json({
       status: "success",
-      data: transaction.rows[0],
+      data: transactionResult.rows[0],
     });
   } catch (error) {
     console.error(error);
@@ -107,11 +110,11 @@ export const updateTransaction = async (req: AuthenticatedRequest, res: Response
 
 // Retrieve the defaultCurrency of the user
 const determineBaseCurrency = async (userId: number): Promise<string> => {
-  const user = await pool.query({
+  const userResult: UserResult = await pool.query({
     text: `SELECT * FROM "user" WHERE id = $1`,
     values: [userId],
   });
-  return user.rows[0].defaultCurrency;
+  return userResult.rows[0].defaultCurrency;
 }
 
 // Convert the amount to the base currency if the base currency is different from the currency
@@ -120,12 +123,12 @@ const determineConvertedAmount = async (options: { amount: number, currency: str
   if (baseCurrency === currency) {
     return amount;
   } else {
-    const dbCurrencies = await pool.query({
+    const currencyResult: CurrencyResult = await pool.query({
       text: `SELECT * FROM currency WHERE code = $1 or code = $2`,
       values: [currency, baseCurrency],
     });
-    const fromCurrencyRate = dbCurrencies.rows.find((dbCurrency) => dbCurrency.code === currency)?.exchangeRate;
-    const toCurrencyRate = dbCurrencies.rows.find((dbCurrency) => dbCurrency.code === baseCurrency)?.exchangeRate;
+    const fromCurrencyRate = currencyResult.rows.find((dbCurrency) => dbCurrency.code === currency)?.exchangeRate as number;
+    const toCurrencyRate = currencyResult.rows.find((dbCurrency) => dbCurrency.code === baseCurrency)?.exchangeRate as number;
     return convertCurrency({ amount, fromCurrencyRate, toCurrencyRate });
   }
 }
@@ -134,12 +137,12 @@ export const deleteTransaction = async (req: AuthenticatedRequest, res: Response
   try {
     const { userId } = req.body.user;
     const { id } = req.params;
-    const transaction = await pool.query({
+    const transactionResult: TransactionResult = await pool.query({
       text: `UPDATE transaction SET "deletedAt" = CURRENT_TIMESTAMP WHERE id = $1 and "userId" = $2 RETURNING *`,
       values: [id, userId],
     });
 
-    if (!transaction.rows[0]) {
+    if (!transactionResult.rows[0]) {
       res.status(404).json({
         status: "error",
         message: "Transaction not found",
@@ -183,7 +186,8 @@ export const getTransactionTemplate = async (req: AuthenticatedRequest, res: Res
     XLSX.utils.book_append_sheet(workbook, modeOfPaymentSheet, "Modes of Payment");
 
     //Create named ranges for the category, mode of payment and currency sheets
-    workbook.Workbook = { Names: [] };
+    workbook.Workbook = workbook.Workbook ?? {};
+    workbook.Workbook.Names = workbook.Workbook.Names ?? [];
     workbook.Workbook.Names.push({
       Name: "Currencies",
       Ref: `Currencies!$A$2:$B${currencies.length + 1}`,
