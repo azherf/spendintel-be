@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import { Response } from "express";
 import { pool } from "../libs/database";
 import { convertCurrency } from "../libs/utils";
@@ -154,7 +155,23 @@ export const deleteTransaction = async (req: AuthenticatedRequest, res: Response
 
 export const getTransactionTemplate = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // TODO: Implement getTransactionTemplate controller
+    // Define the headers of the template
+    const headers = ["Description", "Amount", "Currency", "Category", "Mode of Payment", "Transaction Date"];
+
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+    const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    // Send the workbook as a response
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=transaction_template.xlsx");
+
+    res.status(200).send(excelBuffer);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
