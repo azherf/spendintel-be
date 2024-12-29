@@ -1,30 +1,31 @@
-export type user = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  contact: string;
-  accounts: account[];
-  password: string | undefined;
-  country: string;
-  defaultCurrency: string;
+export type User = {
+  accounts: Account[];
   active: boolean;
+  contact: string;
+  country: string;
   createdAt: string;
-  updatedAt: string;
+  defaultCurrency: string;
   deletedAt: string;
+  email: string;
+  exists?: boolean;
+  firstName: string;
+  id: string;
+  lastName: string;
+  password: string | undefined;
+  updatedAt: string;
 };
 
-export type account = {
-  id: string;
-  userId: string;
-  name: string;
-  currency: string;
+export type Account = {
   balance: number;
   createdAt: string;
-  updatedAt: string;
+  currency: string;
   deletedAt: string;
+  id: string;
+  name: string;
+  updatedAt: string;
+  userId: string;
 };
 
 export interface UserResult {
-  rows: user[];
+  rows: User[];
 }

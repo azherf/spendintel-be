@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { pool } from "../libs/database";
 import { comparePassword, createJWTToken, hashPassword } from "../libs/utils";
+import { UserResult } from "../types/user";
 
 export const signupUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -13,7 +14,7 @@ export const signupUser = async (req: Request, res: Response): Promise<void> => 
       });
     }
 
-    const result = await pool.query({
+    const result: UserResult = await pool.query({
       text: `SELECT EXISTS (SELECT * from "user" WHERE email = $1)`,
       values: [email],
     });
@@ -28,17 +29,17 @@ export const signupUser = async (req: Request, res: Response): Promise<void> => 
 
     const hashedPassword = await hashPassword(password);
 
-    const user = await pool.query({
+    const userResult: UserResult = await pool.query({
       text: `INSERT INTO "user" ("email", "firstName", "password") VALUES ($1, $2, $3) RETURNING *`,
       values: [email, firstName, hashedPassword],
     });
 
-    user.rows[0].password = undefined;
+    userResult.rows[0].password = undefined;
 
     res.status(201).json({
       status: "success",
       message: "User created successfully",
-      data: user.rows[0],
+      data: userResult.rows[0],
     });
 
   } catch (error) {
@@ -58,7 +59,7 @@ export const signinUser = async (req: Request, res: Response): Promise<void> => 
       });
     }
 
-    const result = await pool.query({
+    const result: UserResult = await pool.query({
       text: `SELECT * FROM "user" WHERE email = $1`,
       values: [email],
     });
@@ -73,7 +74,7 @@ export const signinUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const isPasswordMatch = await comparePassword(password, user.password);
+    const isPasswordMatch = await comparePassword(password, user.password as string);
 
     if (!isPasswordMatch) {
       res.status(401).json({
@@ -101,16 +102,3 @@ export const signinUser = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ error: "Internal Server Error" }); // Send an error response
   }
 };
-
-
-// export const signinUser = async (req: Request, res: Response) => {
-//   try {
-//     // Your signin logic here
-//     // For example, verify user credentials
-
-//     res.status(200).json({ message: "User signed in successfully" });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Internal Server Error" }); // Send an error response
-//   }
-// };
