@@ -3,6 +3,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../types/express";
 import { TransactionResult} from "../types/transaction";
 import { UserResult } from "../types/user";
+import { CurrencyResult } from "../types/currency";
 import { pool } from "../libs/database";
 import { convertCurrency } from "../libs/utils";
 import { fetchCategories } from "./categoryController";
@@ -122,12 +123,12 @@ const determineConvertedAmount = async (options: { amount: number, currency: str
   if (baseCurrency === currency) {
     return amount;
   } else {
-    const dbCurrencies = await pool.query({
+    const currencyResult: CurrencyResult = await pool.query({
       text: `SELECT * FROM currency WHERE code = $1 or code = $2`,
       values: [currency, baseCurrency],
     });
-    const fromCurrencyRate = dbCurrencies.rows.find((dbCurrency) => dbCurrency.code === currency)?.exchangeRate;
-    const toCurrencyRate = dbCurrencies.rows.find((dbCurrency) => dbCurrency.code === baseCurrency)?.exchangeRate;
+    const fromCurrencyRate = currencyResult.rows.find((dbCurrency) => dbCurrency.code === currency)?.exchangeRate as number;
+    const toCurrencyRate = currencyResult.rows.find((dbCurrency) => dbCurrency.code === baseCurrency)?.exchangeRate as number;
     return convertCurrency({ amount, fromCurrencyRate, toCurrencyRate });
   }
 }
