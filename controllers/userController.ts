@@ -2,11 +2,12 @@ import { Response } from "express";
 import { pool } from "../libs/database";
 import { comparePassword, hashPassword } from "../libs/utils";
 import { AuthenticatedRequest } from "../types/express";
+import { UserResult } from "../types/user";
 
 export const getUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.body.user;
-    const user = await pool.query({
+    const user: UserResult = await pool.query({
       text: `SELECT * FROM "user" WHERE id = $1`,
       values: [userId],
     });
@@ -36,7 +37,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response): Prom
     const { userId } = req.body.user;
     const { firstName, lastName, contact, country, defaultCurrency } = req.body;
 
-    const user = await pool.query({
+    const user: UserResult = await pool.query({
       text: `SELECT * FROM "user" WHERE id = $1`,
       values: [userId],
     });
@@ -49,7 +50,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    const updatedUser = await pool.query({
+    const updatedUser: UserResult = await pool.query({
       text: `UPDATE "user" SET "firstName" = $1, "lastName" = $2, "contact" = $3, "country" = $4, "defaultCurrency" = $5, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *`,
       values: [firstName, lastName, contact, country, defaultCurrency, userId],
     });
@@ -71,7 +72,7 @@ export const changePassword = async (req: AuthenticatedRequest, res: Response): 
     const { userId } = req.body.user;
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
-    const user = await pool.query({
+    const user: UserResult = await pool.query({
       text: `SELECT * FROM "user" WHERE id = $1`,
       values: [userId],
     });
@@ -92,7 +93,7 @@ export const changePassword = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const isPasswordMatch = await comparePassword(currentPassword, user.rows[0].password);
+    const isPasswordMatch = await comparePassword(currentPassword, user.rows[0].password as string);
 
     if (!isPasswordMatch) {
       res.status(401).json({
