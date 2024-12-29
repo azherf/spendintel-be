@@ -23,7 +23,25 @@ export const getTransactions = async (req: AuthenticatedRequest, res: Response):
 
 export const getTransaction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // TODO: Implement getTransaction controller
+    const { userId } = req.body.user;
+    const { id } = req.params;
+    const transaction = await pool.query({
+      text: `SELECT * FROM transaction WHERE id = $1 and "userId" = $2 and "deletedAt" IS NULL`,
+      values: [id, userId],
+    });
+
+    if (!transaction.rows[0]) {
+      res.status(404).json({
+        status: "error",
+        message: "Transaction not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: transaction.rows[0],
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
