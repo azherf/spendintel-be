@@ -120,3 +120,17 @@ export const deleteCategory = async (req: AuthenticatedRequest, res: Response): 
     res.status(500).json({ error: error.message });
   }
 }
+
+export const fetchCategories = async (userId: number): Promise<any> => {
+  try {
+    const categories = await pool.query({
+      text: `SELECT * FROM category WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
+      values: [userId],
+    });
+
+    return categories.rows;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}

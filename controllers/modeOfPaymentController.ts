@@ -120,3 +120,17 @@ export const deleteModeOfPayment = async (req: AuthenticatedRequest, res: Respon
     res.status(500).json({ error: error.message });
   }
 }
+
+export const fetchModesOfPayment = async (userId: string): Promise<any> => {
+  try {
+    const modesOfPayment = await pool.query({
+      text: `SELECT * FROM mode_of_payment WHERE ("userId" = $1 or "userId" IS NULL) and "deletedAt" IS NULL`,
+      values: [userId],
+    });
+
+    return modesOfPayment.rows;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
