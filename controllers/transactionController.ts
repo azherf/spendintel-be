@@ -57,8 +57,8 @@ export const createTransaction = async (req: AuthenticatedRequest, res: Response
     const { userId } = req.body.user;
     const { description, amount, currency, categoryId, modeOfPaymentId, transactionDate } = req.body;
     let { convertedAmount, baseCurrency } = req.body;
-    baseCurrency = baseCurrency ?? await determineBaseCurrency(userId, baseCurrency);
-    convertedAmount = convertedAmount ?? await determineConvertedAmount(amount, convertedAmount, currency, baseCurrency);
+    baseCurrency = baseCurrency ?? await determineBaseCurrency(userId);
+    convertedAmount = convertedAmount ?? await determineConvertedAmount({ amount, currency, baseCurrency });
     const transaction = await pool.query({
       text: `INSERT INTO transaction ("userId", description, amount, currency, "convertedAmount", "baseCurrency", "categoryId", "modeOfPaymentId", "transactionDate") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       values: [userId, description, amount, currency, convertedAmount, baseCurrency, categoryId, modeOfPaymentId, transactionDate],
@@ -80,8 +80,8 @@ export const updateTransaction = async (req: AuthenticatedRequest, res: Response
     const { id } = req.params;
     const { description, amount, currency, categoryId, modeOfPaymentId, transactionDate } = req.body;
     let { convertedAmount, baseCurrency } = req.body;
-    baseCurrency = baseCurrency ?? await determineBaseCurrency(userId, baseCurrency);
-    convertedAmount = convertedAmount ?? await determineConvertedAmount(amount, convertedAmount, currency, baseCurrency);
+    baseCurrency = baseCurrency ?? await determineBaseCurrency(userId);
+    convertedAmount = convertedAmount ?? await determineConvertedAmount({ amount, currency, baseCurrency });
     const transaction = await pool.query({
       text: `UPDATE transaction SET description = $1, amount = $2, currency = $3, "convertedAmount" = $4, "baseCurrency" = $5, "categoryId" = $6, "modeOfPaymentId" = $7, "transactionDate" = $8, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $9 and "userId" = $10 RETURNING *`,
       values: [description, amount, currency, convertedAmount, baseCurrency, categoryId, modeOfPaymentId, transactionDate, id, userId],
@@ -106,7 +106,7 @@ export const updateTransaction = async (req: AuthenticatedRequest, res: Response
 }
 
 // Retrieve the defaultCurrency of the user
-const determineBaseCurrency = async (userId: number, baseCurrency: string): Promise<string> => {
+const determineBaseCurrency = async (userId: number): Promise<string> => {
   const user = await pool.query({
     text: `SELECT * FROM "user" WHERE id = $1`,
     values: [userId],
@@ -115,7 +115,8 @@ const determineBaseCurrency = async (userId: number, baseCurrency: string): Prom
 }
 
 // Convert the amount to the base currency if the base currency is different from the currency
-const determineConvertedAmount = async (amount: number, convertedAmount: number, currency: string, baseCurrency: string): Promise<number> => {
+const determineConvertedAmount = async (options: { amount: number, currency: string, baseCurrency: string }): Promise<number> => {
+  const { amount, currency, baseCurrency } = options;
   if (baseCurrency === currency) {
     return amount;
   } else {
@@ -231,7 +232,66 @@ export const getTransactionTemplate = async (req: AuthenticatedRequest, res: Res
 
 export const uploadTransactions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    // TODO: Implement uploadTransactions controller
+    if (!req.file) {
+      res.status(400).json({
+        status: "error",
+        message: "Please upload a file",
+      });
+      return;
+    }
+    const { userId } = req.body.user;
+
+    const workbook = XLSX.readFile(req.file.path);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const transactions = XLSX.utils.sheet_to_json(worksheet);
+
+    const dbCategories = await fetchCategories(userId);
+    const dbModesOfPayment = await fetchModesOfPayment(userId);
+
+    const newTransactions = transactions.map((transaction: any) => {
+      const dbCategory = dbCategories.find((dbCategory) => dbCategory.id === transaction.Category);
+      const dbModeOfPayment = dbModesOfPayment.find((dbModeOfPayment) => dbModeOfPayment.id === transaction["Mode of Payment"]);
+      const baseCurrency = transaction["Base Currency"] ?? determineBaseCurrency(userId);
+      return {
+        userId,
+        description: transaction.Description,
+        amount: transaction.Amount,
+        currency: transaction.Currency,
+        convertedAmount: transaction["Converted Amount"] ?? determineConvertedAmount({ amount: transaction.Amount, currency: transaction.Currency, baseCurrency }),
+        baseCurrency,
+        categoryId: dbCategory,
+        modeOfPaymentId: dbModeOfPayment,
+        transactionDate: transaction["Transaction Date"],
+      };
+    });
+
+    const newTransactionValues = newTransactions.map((transaction) => {
+      return [
+        transaction.userId,
+        transaction.description,
+        transaction.amount,
+        transaction.currency,
+        transaction.convertedAmount,
+        transaction.baseCurrency,
+        transaction.categoryId,
+        transaction.modeOfPaymentId,
+        transaction.transactionDate,
+      ];
+    });
+
+    const newTransactionQuery = {
+      text: `INSERT INTO transaction ("userId", description, amount, currency, "convertedAmount", "baseCurrency", "categoryId", "modeOfPaymentId", "transactionDate") VALUES ${newTransactionValues.map((transaction
+      ) => `($${transaction.join(", $")})`).join(", ")}`,
+      values: newTransactionValues.flat(),
+    };
+
+    await pool.query(newTransactionQuery);
+
+    res.status(201).json({
+      status: "success",
+      message: `${newTransactions.length} transactions uploaded successfully`,
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
