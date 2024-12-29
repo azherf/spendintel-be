@@ -183,7 +183,8 @@ export const getTransactionTemplate = async (req: AuthenticatedRequest, res: Res
     XLSX.utils.book_append_sheet(workbook, modeOfPaymentSheet, "Modes of Payment");
 
     //Create named ranges for the category, mode of payment and currency sheets
-    workbook.Workbook = { Names: [] };
+    workbook.Workbook = workbook.Workbook ?? {};
+    workbook.Workbook.Names = workbook.Workbook.Names ?? [];
     workbook.Workbook.Names.push({
       Name: "Currencies",
       Ref: `Currencies!$A$2:$B${currencies.length + 1}`,
