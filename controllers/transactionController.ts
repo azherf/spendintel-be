@@ -161,9 +161,9 @@ export const getTransactionTemplate = async (req: AuthenticatedRequest, res: Res
     const { userId } = req.body.user;
 
     //fetch categories, modes of payment and currencies
+    const currencies = await fetchCurrencies(userId);
     const categories = await fetchCategories(userId);
     const modesOfPayment = await fetchModesOfPayment(userId);
-    const currencies = await fetchCurrencies(userId);
 
     // Define the headers of the template
     const headers = ["Description", "Amount", "Currency", "Converted Amount", "Base Currency", "Category", "Mode of Payment", "Transaction Date"];
@@ -171,29 +171,29 @@ export const getTransactionTemplate = async (req: AuthenticatedRequest, res: Res
     // Create a new workbook
     const workbook = XLSX.utils.book_new();
     const mainSheet = XLSX.utils.aoa_to_sheet([headers]);
-    const categorySheet = XLSX.utils.aoa_to_sheet([["Category"], ...categories.map((category) => [category.name])]);
-    const modeOfPaymentSheet = XLSX.utils.aoa_to_sheet([["Mode of Payment"], ...modesOfPayment.map((modeOfPayment) => [modeOfPayment.name])]);
     const currencySheet = XLSX.utils.aoa_to_sheet([["Currency"], ...currencies.map((currency) => [currency.code])]);
+    const categorySheet = XLSX.utils.aoa_to_sheet([["ID", "Name"], ...categories.map((category) => [category.id, category.name])]);
+    const modeOfPaymentSheet = XLSX.utils.aoa_to_sheet([["ID", "Name"], ...modesOfPayment.map((modeOfPayment) => [modeOfPayment.id, modeOfPayment.name])]);
 
     // Add the worksheets to the workbook
     XLSX.utils.book_append_sheet(workbook, mainSheet, "Transactions");
+    XLSX.utils.book_append_sheet(workbook, currencySheet, "Currencies");
     XLSX.utils.book_append_sheet(workbook, categorySheet, "Categories");
     XLSX.utils.book_append_sheet(workbook, modeOfPaymentSheet, "Modes of Payment");
-    XLSX.utils.book_append_sheet(workbook, currencySheet, "Currencies");
 
     //Create named ranges for the category, mode of payment and currency sheets
     workbook.Workbook = { Names: [] };
     workbook.Workbook.Names.push({
+      Name: "Currencies",
+      Ref: `Currencies!$A$2:$B${currencies.length + 1}`,
+    });
+    workbook.Workbook.Names.push({
       Name: "Categories",
-      Ref: `Categories!$A$2:$A${categories.length + 1}`,
+      Ref: `Categories!$A$2:$B${categories.length + 1}`,
     });
     workbook.Workbook.Names.push({
       Name: "ModesOfPayment",
-      Ref: `Modes of Payment!$A$2:$A${modesOfPayment.length + 1}`,
-    });
-    workbook.Workbook.Names.push({
-      Name: "Currencies",
-      Ref: `Currencies!$A$2:$A${currencies.length + 1}`,
+      Ref: `Modes of Payment!$A$2:$B${modesOfPayment.length + 1}`,
     });
 
     //Set data validation for the category, mode of payment and currency columns
